@@ -1,0 +1,26 @@
+# Entorno virtual de Python
+venv/
+*.pyc
+__pycache__/
+
+# Archivos de configuración del editor y del sistema operativo
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Archivos de sesión de Flask y subidas temporales
+# ¡Importante para no subir los PDFs de otras personas a tu repositorio público!
+uploads/
+instance/
+.webassets-cache
+*.tmp
+*.log
+
+# Archivos generados por dependencias (si aplica)
+*.egg-info/
+dist/
+build/
+
+# Archivos de Excel generados localmente (si guardas alguno)
+*.xlsx

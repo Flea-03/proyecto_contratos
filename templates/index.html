@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Extractor de Datos de Contratos (Mejorado)</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      /* Estilo para el indicador de carga */
+      .loader {
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #3498db;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container mt-5 mb-5">
+      <h1 class="mb-4">Extractor de Datos de Contratos PDF (v2.0)</h1>
+      <p>
+        Sube uno o varios archivos PDF (incluidos escaneados) para extraer
+        información clave.
+      </p>
+
+      <!-- ... -->
+      <div class="card bg-light p-4">
+        <form id="upload-form">
+          <div class="mb-3">
+            <label for="upload_files" class="form-label"
+              >Selecciona archivos PDF o un único archivo .ZIP:</label
+            >
+            <input
+              class="form-control"
+              type="file"
+              id="upload_files"
+              name="upload_files"
+              multiple
+              required
+              accept=".pdf,.zip"
+            />
+            <div class="form-text">
+              Puedes subir múltiples PDF o un solo archivo ZIP que los contenga.
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">Procesar</button>
+        </form>
+      </div>
+      <!-- ... -->
+
+      <!-- Contenedor para mostrar el estado y los resultados -->
+      <div id="status-container" class="mt-4"></div>
+      <div id="errors-container" class="mt-4"></div>
+      <div id="results-container" class="mt-4"></div>
+    </div>
+
+    <script>
+      const uploadForm = document.getElementById("upload-form");
+      const statusContainer = document.getElementById("status-container");
+      const errorsContainer = document.getElementById("errors-container");
+      const resultsContainer = document.getElementById("results-container");
+
+      uploadForm.addEventListener("submit", async (event) => {
+        event.preventDefault(); // Evita que el formulario se envíe de la forma tradicional
+
+        // Limpiar resultados anteriores
+        statusContainer.innerHTML = "";
+        errorsContainer.innerHTML = "";
+        resultsContainer.innerHTML = "";
+
+        // Mostrar indicador de carga
+        statusContainer.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <strong>Procesando...</strong>
+                    <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
+                </div>
+                <div class="loader"></div>`;
+
+        const formData = new FormData(uploadForm);
+
+        try {
+          const response = await fetch("/process", {
+            method: "POST",
+            body: formData,
+          });
+
+          // Limpiar el indicador de carga
+          statusContainer.innerHTML = "";
+          const data = await response.json();
+
+          // Mostrar errores si los hubo (incluso si hubo éxito parcial)
+          if (data.errors && data.errors.length > 0) {
+            let errorHtml =
+              '<div class="alert alert-warning"><h4>Archivos con problemas:</h4><ul>';
+            data.errors.forEach((err) => {
+              errorHtml += `<li>${err}</li>`;
+            });
+            errorHtml += "</ul></div>";
+            errorsContainer.innerHTML = errorHtml;
+          }
+
+          // Mostrar la tabla de resultados si el proceso fue exitoso
+          if (data.success) {
+            const downloadButton = `
+                        <a href="/download" class="btn btn-success mb-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-excel" viewBox="0 0 16 16"><path d="M5.884 6.68a.5.5 0 1 0-.768.64L7.349 10l-2.233 2.68a.5.5 0 0 0 .768.64L8 10.781l2.116 2.54a.5.5 0 0 0 .768-.64L8.651 10l2.233-2.68a.5.5 0 0 0-.768-.64L8 9.219l-2.116-2.54z"/><path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/></svg>
+                            Descargar en Excel
+                        </a>`;
+
+            resultsContainer.innerHTML = `
+                        <h2>Resultados del Procesamiento</h2>
+                        ${downloadButton}
+                        <div class="table-responsive">
+                            ${data.table_html}
+                        </div>`;
+          } else if (!data.errors || data.errors.length === 0) {
+            // Caso en que success=false pero no hay errores específicos (ej. no se enviaron archivos)
+            errorsContainer.innerHTML =
+              '<div class="alert alert-danger">No se pudo completar el proceso.</div>';
+          }
+        } catch (error) {
+          console.error("Error en la solicitud fetch:", error);
+          statusContainer.innerHTML = "";
+          errorsContainer.innerHTML =
+            '<div class="alert alert-danger"><strong>Error de conexión.</strong> No se pudo comunicar con el servidor.</div>';
+        }
+      });
+    </script>
+  </body>
+</html>
